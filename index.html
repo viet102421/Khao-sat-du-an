@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Khảo sát dự án Claude</title>
+<meta name="description" content="Trả lời vài câu hỏi để tạo tệp hướng dẫn dự án cho Claude. Dữ liệu chỉ lưu trên thiết bị của bạn.">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --surface: #ffffff;
+    --text: #1f2328;
+    --muted: #5b6168;
+    --border: #d5d3cc;
+    --accent: #1d6b5c;
+    --accent-text: #ffffff;
+    --accent-soft: #e2f0ec;
+    --chip-bg: #f0eee8;
+    --focus: #f0a000;
+    --danger: #a3341f;
+    --placeholder: #9a9c9f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161816;
+      --surface: #202321;
+      --text: #ecebe6;
+      --muted: #a9aca8;
+      --border: #3c403d;
+      --accent: #5cc2a8;
+      --accent-text: #0d1f1a;
+      --accent-soft: #1f3a33;
+      --chip-bg: #2a2e2b;
+      --focus: #ffc94d;
+      --danger: #ff8f78;
+      --placeholder: #777b78;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161816; --surface: #202321; --text: #ecebe6; --muted: #a9aca8;
+    --border: #3c403d; --accent: #5cc2a8; --accent-text: #0d1f1a; --accent-soft: #1f3a33;
+    --chip-bg: #2a2e2b; --focus: #ffc94d; --danger: #ff8f78; --placeholder: #777b78;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 16px 16px 40px; }
+  header h1 { font-size: 1.5rem; line-height: 1.25; margin: 8px 0 6px; }
+  .privacy {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--accent-soft); color: var(--text);
+    border-radius: 10px; padding: 10px 12px; margin: 8px 0 16px; font-size: 16px;
+  }
+  .privacy svg { flex: none; margin-top: 3px; }
+  .progress-label { display: flex; justify-content: space-between; gap: 8px; font-size: 16px; color: var(--muted); margin-bottom: 6px; }
+  .progress-label strong { color: var(--text); font-weight: 600; }
+  .bar { height: 10px; background: var(--chip-bg); border-radius: 99px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .25s ease; }
+
+  main.card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px 16px; margin-top: 16px;
+  }
+  @media (min-width: 600px) { main.card { padding: 28px 28px; } }
+  h2 { font-size: 1.35rem; margin: 0 0 4px; outline: none; }
+  .intro { color: var(--muted); margin: 0 0 20px; font-size: 16px; }
+
+  .field { margin: 0 0 24px; border: 0; padding: 0; min-width: 0; }
+  .q, legend { display: block; font-weight: 600; margin-bottom: 6px; padding: 0; }
+  .opt { font-weight: 400; color: var(--muted); font-size: 16px; }
+  .hint { color: var(--muted); font-size: 16px; margin: -2px 0 8px; }
+  input[type="text"], textarea {
+    width: 100%; font: inherit; font-size: 17px; color: var(--text);
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; min-height: 50px;
+  }
+  textarea { min-height: 104px; resize: vertical; }
+  textarea.tall { min-height: 140px; }
+  ::placeholder { color: var(--placeholder); opacity: 1; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, .choice input:focus-visible + span {
+    outline: 3px solid var(--focus); outline-offset: 2px;
+  }
+
+  .chips-wrap { margin-top: 8px; }
+  .chips-title { font-size: 16px; color: var(--muted); margin: 0 0 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: inherit; font-size: 16px; line-height: 1.3; text-align: left;
+    min-height: 44px; padding: 9px 14px; border-radius: 22px; cursor: pointer;
+    background: var(--chip-bg); color: var(--text); border: 1.5px solid var(--border);
+    max-width: 100%;
+  }
+  .chip::before { content: "+ "; color: var(--accent); font-weight: 700; }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .chip[aria-pressed="true"]::before { content: "✓ "; color: var(--accent-text); }
+
+  .choices { display: grid; gap: 8px; }
+  @media (min-width: 600px) { .choices.cols { grid-template-columns: 1fr 1fr; } }
+  .choice { position: relative; display: block; cursor: pointer; }
+  .choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .choice span {
+    display: flex; align-items: center; gap: 10px; min-height: 52px;
+    padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--surface);
+  }
+  .choice span::before {
+    content: ""; flex: none; width: 22px; height: 22px; border: 2px solid var(--muted); background: var(--surface);
+  }
+  .choice input[type="radio"] + span::before { border-radius: 50%; }
+  .choice input[type="checkbox"] + span::before { border-radius: 5px; }
+  .choice input:checked + span { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+  .choice input[type="radio"]:checked + span::before { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, var(--surface) 50%); }
+  .choice input[type="checkbox"]:checked + span::before {
+    border-color: var(--accent); background: var(--accent)
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat;
+  }
+  .other-input { margin-top: 8px; }
+  .notice { font-size: 16px; padding: 10px 12px; border-radius: 10px; background: var(--chip-bg); margin: 0 0 16px; }
+
+  nav.steps { display: flex; gap: 12px; margin-top: 20px; }
+  .btn {
+    font: inherit; font-size: 17px; font-weight: 600; min-height: 52px; padding: 12px 20px;
+    border-radius: 12px; cursor: pointer; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--text); flex: 1;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .btn[hidden] { display: none; }
+  .btn.link { background: none; border: 0; color: var(--danger); text-decoration: underline; flex: none; font-weight: 500; padding: 12px 4px; }
+  .footer-row { display: flex; justify-content: center; margin-top: 20px; }
+
+  .actions { display: grid; gap: 10px; margin: 0 0 16px; }
+  @media (min-width: 600px) { .actions { grid-template-columns: 1fr 1fr; } }
+  .status { min-height: 1.5em; font-size: 16px; color: var(--accent); font-weight: 600; margin: 0 0 8px; }
+  pre.preview {
+    white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; margin: 0; max-height: 60vh; overflow: auto;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 16px; line-height: 1.5;
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Khảo sát dự án Claude</h1>
+    <p class="privacy" role="note">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 10V8a6 6 0 1 1 12 0v2M5 10h14v11H5z"/></svg>
+      <span>Câu trả lời chỉ lưu trên thiết bị của bạn, không gửi đi đâu.</span>
+    </p>
+    <div class="progress-label"><strong id="stepTitle"></strong><span id="stepCount"></span></div>
+    <div class="bar" role="progressbar" aria-label="Tiến độ khảo sát" aria-valuemin="0" aria-valuemax="100" id="bar"><span id="barFill"></span></div>
+  </header>
+
+  <main class="card" id="card" aria-live="polite"></main>
+
+  <nav class="steps" aria-label="Điều hướng">
+    <button type="button" class="btn" id="backBtn">← Quay lại</button>
+    <button type="button" class="btn primary" id="nextBtn">Tiếp theo →</button>
+  </nav>
+  <div class="footer-row">
+    <button type="button" class="btn link" id="clearBtn">Xóa câu trả lời</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Câu hỏi ---------- */
+  var PRODUCT_OPTIONS = [
+    { value: "word", label: "Báo cáo Word" },
+    { value: "slides", label: "Trang chiếu (PowerPoint)" },
+    { value: "sheet", label: "Bảng tính (Excel)" },
+    { value: "web", label: "Trang web" },
+    { value: "summary", label: "Bản tóm tắt" },
+    { value: "email", label: "Email" },
+    { value: "code", label: "Chương trình (mã nguồn)" },
+    { value: "other", label: "Khác" }
+  ];
+
+  var SECTIONS = [
+    {
+      title: "Về bạn",
+      intro: "Cho Claude biết bạn là ai để cách trả lời phù hợp với công việc của bạn.",
+      fields: [
+        { id: "role", label: "Vai trò hoặc chức danh của bạn", type: "text",
+          placeholder: "VD: Kỹ sư vận hành nhà máy xi măng" },
+        { id: "industry", label: "Ngành, lĩnh vực", type: "text",
+          hint: "Chọn ngành để nhận gợi ý đáp án phù hợp ở các phần sau.",
+          placeholder: "VD: Sản xuất xi măng" },
+        { id: "experience", label: "Mức kinh nghiệm trong công việc này", type: "radio", options: [
+          { value: "beginner", label: "Mới bắt đầu" },
+          { value: "experienced", label: "Có kinh nghiệm" },
+          { value: "expert", label: "Chuyên gia" }
+        ] }
+      ]
+    },
+    {
+      title: "Về dự án",
+      intro: "Dự án là một việc bạn sẽ làm nhiều lần cùng Claude.",
+      fields: [
+        { id: "projectName", label: "Tên dự án", type: "text",
+          placeholder: "VD: Báo cáo sự cố dây chuyền nghiền" },
+        { id: "goal", label: "Mục tiêu chính", type: "lines",
+          placeholder: "VD: Viết báo cáo sự cố nhanh, đúng mẫu của nhà máy" },
+        { id: "challenges", label: "Khó khăn đang gặp", type: "lines",
+          placeholder: "VD: Mỗi báo cáo mất 2–3 giờ, dữ liệu nằm rải rác ở nhiều ca" },
+        { id: "outcome", label: "Kết quả mong muốn", type: "lines",
+          placeholder: "VD: Có bản nháp đúng mẫu trong 15 phút, chỉ cần sửa ít" },
+        { id: "deadline", label: "Thời hạn", type: "text", optional: true,
+          placeholder: "VD: Nộp trong vòng 24 giờ sau sự cố" }
+      ]
+    },
+    {
+      title: "Về sản phẩm",
+      intro: "Sản phẩm là thứ Claude sẽ tạo ra cho bạn.",
+      fields: [
+        { id: "products", label: "Loại sản phẩm", type: "checkbox", hint: "Chọn được nhiều loại.",
+          options: PRODUCT_OPTIONS, otherId: "productsOther",
+          otherPlaceholder: "VD: Sơ đồ quy trình, phiếu kiểm tra" },
+        { id: "audience", label: "Ai đọc hoặc dùng sản phẩm?", type: "lines",
+          placeholder: "VD: Quản đốc phân xưởng, phòng kỹ thuật" },
+        { id: "layout", label: "Bố cục hoặc mẫu bắt buộc", type: "lines",
+          placeholder: "VD: Theo mẫu BM-SC-01: Diễn biến – Nguyên nhân – Khắc phục – Phòng ngừa" },
+        { id: "length", label: "Độ dài mong muốn", type: "text",
+          placeholder: "VD: 2–4 trang A4" }
+      ]
+    },
+    {
+      title: "Cách trình bày",
+      intro: "Claude sẽ viết theo đúng giọng và cách gọi tên mà bạn chọn.",
+      fields: [
+        { id: "language", label: "Ngôn ngữ", type: "text",
+          placeholder: "VD: Tiếng Việt" },
+        { id: "tone", label: "Giọng văn", type: "checkbox", hint: "Chọn được nhiều.", options: [
+          { value: "formal", label: "Trang trọng" },
+          { value: "friendly", label: "Thân thiện" },
+          { value: "technical", label: "Kỹ thuật" }
+        ] },
+        { id: "detail", label: "Mức chi tiết", type: "radio", options: [
+          { value: "brief", label: "Ngắn gọn, chỉ ý chính" },
+          { value: "medium", label: "Vừa phải" },
+          { value: "detailed", label: "Chi tiết, đầy đủ" }
+        ] },
+        { id: "terms", label: "Thuật ngữ chuyên ngành và cách gọi", type: "lines", tall: true,
+          hint: "Mỗi dòng một thuật ngữ.",
+          placeholder: "VD: DCS = hệ thống điều khiển phân tán\nLò nung: gọi là “lò quay”, không gọi “lò đốt”" },
+        { id: "abbrev", label: "Có được viết tắt không?", type: "radio", options: [
+          { value: "yes", label: "Được viết tắt" },
+          { value: "defined", label: "Chỉ viết tắt từ có trong mục Thuật ngữ" },
+          { value: "no", label: "Không viết tắt, luôn viết đầy đủ" }
+        ] },
+        { id: "missingInfo", label: "Khi thiếu thông tin, Claude nên làm gì?", type: "radio", options: [
+          { value: "ask", label: "Hỏi lại tôi trước khi làm" },
+          { value: "decide", label: "Tự quyết định và ghi chú rõ giả định" },
+          { value: "mixed", label: "Hỏi khi là việc quan trọng, tự quyết khi là chi tiết nhỏ" }
+        ] }
+      ]
+    },
+    {
+      title: "Quy tắc và kiểm tra",
+      intro: "Những điều Claude phải nhớ mỗi lần làm việc trong dự án này.",
+      fields: [
+        { id: "mustDo", label: "Điều bắt buộc", type: "lines", hint: "Mỗi dòng một quy tắc.",
+          placeholder: "VD: Ghi rõ thời gian, vị trí, thiết bị liên quan" },
+        { id: "mustNot", label: "Điều không được làm", type: "lines", hint: "Mỗi dòng một điều.",
+          placeholder: "VD: Không đổ lỗi cho cá nhân" },
+        { id: "references", label: "Tài liệu tham khảo sẽ tải lên", type: "lines",
+          placeholder: "VD: Mẫu báo cáo sự cố BM-SC-01.docx" },
+        { id: "criteria", label: "Tiêu chí một sản phẩm đạt yêu cầu", type: "lines", hint: "Claude sẽ tự kiểm tra theo các tiêu chí này trước khi giao.",
+          placeholder: "VD: Nguyên nhân gốc được chứng minh bằng dữ liệu" },
+        { id: "goodExample", label: "Ví dụ sản phẩm tốt", type: "textarea", optional: true, tall: true,
+          placeholder: "VD: Dán một đoạn trong báo cáo cũ mà bạn thấy viết tốt, hoặc mô tả nó" }
+      ]
+    }
+  ];
+
+  /* ---------- Gợi ý đáp án ---------- */
+  var GENERAL = {
+    role: ["Giáo viên mầm non", "Giáo viên phổ thông", "Kỹ sư vận hành", "Nhân viên văn phòng", "Trưởng phòng", "Nhân viên kinh doanh"],
+    industry: ["Giáo dục mầm non", "Giáo dục phổ thông", "Sản xuất – nhà máy", "Văn phòng – hành chính", "Kinh doanh – bán hàng", "Y tế", "Công nghệ thông tin"],
+    goal: ["Làm việc nhanh hơn, tiết kiệm thời gian", "Tạo sản phẩm đúng mẫu, thống nhất", "Nâng cao chất lượng nội dung"],
+    challenges: ["Tốn nhiều thời gian", "Thiếu mẫu chuẩn", "Nội dung chưa nhất quán", "Khó diễn đạt ngắn gọn"],
+    outcome: ["Bản nháp dùng được ngay, chỉ cần sửa ít", "Đúng mẫu của đơn vị"],
+    deadline: ["Hằng tuần", "Trong tháng này", "Không gấp"],
+    audience: ["Cấp trên", "Đồng nghiệp", "Khách hàng", "Chính tôi"],
+    layout: ["Theo mẫu của đơn vị (sẽ tải lên)", "Có tiêu đề, các mục rõ ràng, kết luận", "Tự do, miễn rõ ràng"],
+    length: ["1 trang", "2–3 trang", "Dưới 200 chữ"],
+    language: ["Tiếng Việt", "Tiếng Anh", "Song ngữ Việt – Anh"],
+    mustDo: ["Dùng tiếng Việt có dấu, đúng chính tả", "Ghi rõ nguồn khi trích dẫn số liệu", "Làm theo đúng mẫu đã tải lên"],
+    mustNot: ["Bịa số liệu hoặc nguồn", "Dùng từ ngữ suồng sã", "Thêm nội dung ngoài phạm vi yêu cầu"],
+    references: ["Mẫu của đơn vị", "Quy định, hướng dẫn nội bộ", "Sản phẩm cũ đã được duyệt"],
+    criteria: ["Đúng cấu trúc, đúng mẫu", "Không lỗi chính tả", "Đủ các ý đã yêu cầu", "Số liệu khớp với tài liệu gốc"]
+  };
+
+  var PRESETS = {
+    mamnon: {
+      name: "Giáo dục mầm non",
+      keywords: ["mầm non", "mẫu giáo", "nhà trẻ", "gdmn"],
+      defaultProducts: ["slides"],
+      role: ["Giáo viên mầm non", "Tổ trưởng chuyên môn", "Phó hiệu trưởng phụ trách chuyên môn"],
+      projectName: ["Bài giảng trình chiếu lớp Lá", "Trò chơi học tập trên trang chiếu", "Trang chiếu họp phụ huynh"],
+      goal: ["Soạn bài giảng trình chiếu cho trẻ 3–4 tuổi", "Soạn bài giảng trình chiếu cho trẻ 4–5 tuổi", "Soạn bài giảng trình chiếu cho trẻ 5–6 tuổi", "Làm trò chơi học tập trên trang chiếu", "Làm trang chiếu họp phụ huynh"],
+      challenges: ["Mất nhiều thời gian làm trang chiếu", "Khó tìm hình ảnh phù hợp với trẻ", "Khó nghĩ ra trò chơi mới", "Chưa quen dùng PowerPoint"],
+      outcome: ["Bộ trang chiếu dùng được ngay trong tiết dạy", "Có gợi ý lời nói của cô cho từng trang", "Có trò chơi củng cố cuối bài"],
+      deadline: ["Trước tiết dự giờ", "Hằng tuần theo kế hoạch chủ đề"],
+      audience: ["Trẻ mẫu giáo", "Phụ huynh", "Ban giám hiệu, dự giờ", "Đồng nghiệp trong tổ"],
+      layout: ["Ổn định tổ chức – Hoạt động chính – Kết thúc", "Mỗi trang một ý, chữ to, nhiều hình", "Theo giáo án của trường (sẽ tải lên)"],
+      length: ["10–15 trang chiếu", "Hoạt động 20–30 phút", "Hoạt động 30–35 phút"],
+      language: ["Tiếng Việt"],
+      terms: ["GDMN = Giáo dục mầm non", "LQCC = Làm quen chữ cái", "LQVT = Làm quen với toán", "Trẻ: gọi là “các con” hoặc “các bé”", "Giáo viên: tự xưng là “cô”"],
+      mustDo: ["Chữ cỡ lớn, phông dễ đọc", "Câu ngắn, từ ngữ phù hợp lứa tuổi", "Có gợi ý lời nói của cô cho từng trang", "Hình ảnh tươi sáng, gần gũi với trẻ", "Bám sát chủ đề và mục tiêu của chương trình GDMN"],
+      mustNot: ["Hình ảnh bạo lực, đáng sợ", "Quá nhiều chữ trên một trang", "Hiệu ứng nhấp nháy gây rối mắt", "Nội dung vượt quá lứa tuổi của trẻ"],
+      references: ["Giáo án của bài dạy", "Kế hoạch chủ đề của lớp", "Chương trình Giáo dục mầm non", "Mẫu trang chiếu của trường"],
+      criteria: ["Trẻ nhìn và hiểu được mà không cần đọc chữ", "Có hoạt động tương tác cho trẻ", "Đúng chủ đề theo chương trình GDMN", "Thời lượng phù hợp với độ tuổi"]
+    },
+    phothong: {
+      name: "Giáo dục phổ thông",
+      keywords: ["phổ thông", "tiểu học", "thcs", "thpt", "giáo viên", "trường học"],
+      defaultProducts: [],
+      role: ["Giáo viên tiểu học", "Giáo viên THCS", "Giáo viên THPT", "Tổ trưởng chuyên môn"],
+      goal: ["Soạn giáo án theo Công văn 5512", "Làm bài giảng trình chiếu", "Làm đề kiểm tra và ma trận đề", "Viết nhận xét học sinh"],
+      challenges: ["Soạn giáo án mất nhiều thời gian", "Khó ra đề đủ mức độ nhận thức"],
+      audience: ["Học sinh", "Phụ huynh", "Tổ chuyên môn", "Ban giám hiệu"],
+      layout: ["Giáo án theo Công văn 5512", "Ma trận – Đặc tả – Đề – Đáp án"],
+      length: ["15–20 trang chiếu", "Một tiết 45 phút"],
+      terms: ["SGK = Sách giáo khoa", "HS = Học sinh", "GV = Giáo viên"],
+      mustDo: ["Bám sát yêu cầu cần đạt của chương trình", "Kiến thức chính xác theo SGK"],
+      mustNot: ["Kiến thức sai hoặc vượt chương trình"],
+      criteria: ["Đủ các hoạt động: Mở đầu – Hình thành kiến thức – Luyện tập – Vận dụng"]
+    },
+    sanxuat: {
+      name: "Sản xuất – nhà máy",
+      keywords: ["nhà máy", "sản xuất", "vận hành", "xi măng", "phân xưởng"],
+      defaultProducts: ["word"],
+      role: ["Kỹ sư vận hành", "Trưởng ca", "Kỹ sư bảo trì", "Quản đốc phân xưởng"],
+      projectName: ["Báo cáo sự cố dây chuyền", "Báo cáo ca vận hành", "Quy trình vận hành chuẩn"],
+      goal: ["Viết báo cáo sự cố nhanh, đúng mẫu", "Phân tích nguyên nhân gốc rễ", "Đề xuất biện pháp khắc phục, phòng ngừa"],
+      challenges: ["Báo cáo sự cố mất nhiều thời gian", "Dữ liệu rời rạc từ nhiều ca", "Khó trình bày phân tích nguyên nhân rõ ràng"],
+      outcome: ["Báo cáo Word nộp được trong ca", "Có phân tích 5 Why và hành động khắc phục"],
+      deadline: ["Trong 24 giờ sau sự cố", "Cuối mỗi ca"],
+      audience: ["Quản đốc phân xưởng", "Phòng kỹ thuật", "Ban giám đốc nhà máy"],
+      layout: ["Mẫu báo cáo sự cố của nhà máy", "Diễn biến – Nguyên nhân – Khắc phục – Phòng ngừa"],
+      length: ["2–4 trang A4"],
+      terms: ["DCS = Hệ thống điều khiển phân tán", "OEE = Hiệu suất thiết bị tổng thể", "5 Why = Phân tích 5 lần hỏi tại sao", "CAPA = Hành động khắc phục và phòng ngừa"],
+      mustDo: ["Ghi rõ thời gian, vị trí, thiết bị liên quan", "Phân biệt nguyên nhân trực tiếp và nguyên nhân gốc", "Mỗi hành động có người phụ trách và thời hạn"],
+      mustNot: ["Đổ lỗi cho cá nhân", "Suy đoán nguyên nhân khi chưa có dữ liệu"],
+      references: ["Nhật ký vận hành ca", "Dữ liệu xu hướng từ DCS", "Quy trình vận hành chuẩn (SOP)"],
+      criteria: ["Có đủ diễn biến theo mốc thời gian", "Nguyên nhân gốc được chứng minh bằng dữ liệu", "Hành động khắc phục cụ thể, đo được"]
+    },
+    vanphong: {
+      name: "Văn phòng – hành chính",
+      keywords: ["văn phòng", "hành chính", "nhân sự", "thư ký"],
+      defaultProducts: [],
+      role: ["Chuyên viên hành chính", "Thư ký", "Chuyên viên nhân sự"],
+      goal: ["Soạn công văn, tờ trình", "Viết biên bản họp", "Tóm tắt tài liệu dài"],
+      layout: ["Thể thức văn bản theo Nghị định 30/2020/NĐ-CP"],
+      mustDo: ["Đúng thể thức văn bản hành chính"]
+    },
+    kinhdoanh: {
+      name: "Kinh doanh – bán hàng",
+      keywords: ["kinh doanh", "bán hàng", "marketing", "tiếp thị", "sales"],
+      defaultProducts: [],
+      role: ["Nhân viên kinh doanh", "Trưởng nhóm bán hàng", "Nhân viên marketing"],
+      goal: ["Viết email chào hàng", "Làm báo cáo doanh số", "Soạn báo giá"],
+      audience: ["Khách hàng doanh nghiệp", "Khách hàng cá nhân", "Quản lý bán hàng"],
+      mustNot: ["Hứa hẹn quá khả năng sản phẩm", "Đưa giá khi chưa được duyệt"]
+    },
+    yte: {
+      name: "Y tế",
+      keywords: ["y tế", "bệnh viện", "điều dưỡng", "bác sĩ", "dược"],
+      defaultProducts: [],
+      role: ["Điều dưỡng", "Bác sĩ", "Dược sĩ"],
+      goal: ["Làm tài liệu truyền thông sức khỏe", "Tóm tắt hướng dẫn chuyên môn"],
+      audience: ["Người bệnh và người nhà", "Đồng nghiệp trong khoa"],
+      mustNot: ["Đưa lời khuyên điều trị thay cho bác sĩ"]
+    },
+    cntt: {
+      name: "Công nghệ thông tin",
+      keywords: ["công nghệ thông tin", "cntt", "phần mềm", "lập trình", "it"],
+      defaultProducts: [],
+      role: ["Lập trình viên", "Kỹ sư hệ thống", "Trưởng nhóm kỹ thuật"],
+      goal: ["Viết tài liệu kỹ thuật", "Viết và rà soát mã nguồn", "Viết báo cáo sự cố hệ thống"],
+      audience: ["Lập trình viên trong nhóm", "Người dùng cuối"],
+      mustDo: ["Ghi chú rõ ràng trong mã nguồn"]
+    }
+  };
+
+  /* ---------- Trạng thái và lưu tạm ---------- */
+  var STORAGE_KEY = "khaoSatDuAn.v1";
+  var TOTAL = SECTIONS.length;
+  var state = { step: 0, answers: {}, appliedPreset: "" };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (data && typeof data === "object") {
+          state.answers = data.answers || {};
+          state.step = Math.min(Math.max(parseInt(data.step, 10) || 0, 0), TOTAL);
+          state.appliedPreset = data.appliedPreset || "";
+        }
+      }
+    } catch (e) { /* bộ nhớ trình duyệt không dùng được: bỏ qua */ }
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* bỏ qua */ }
+  }
+  function clearStore() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* bỏ qua */ }
+  }
+
+  /* ---------- Tiện ích ---------- */
+  function str(v) { return typeof v === "string" ? v : ""; }
+  function el(tag, attrs, children) {
+    var n = document.createElement(tag);
+    if (attrs) for (var k in attrs) {
+      if (k === "text") n.textContent = attrs[k];
+      else if (k === "class") n.className = attrs[k];
+      else n.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
+  }
+  function cleanItem(s) {
+    return s.replace(/^\s*(?:[-*•+]|\d+[.)])\s+/, "").trim();
+  }
+  function toLines(v) {
+    return str(v).split(/\r?\n/).map(cleanItem).filter(Boolean);
+  }
+  function toParts(v) {
+    return str(v).split(";").map(function (s) { return s.trim(); }).filter(Boolean);
+  }
+  function noDot(s) { return s.replace(/[.。\s]+$/, ""); }
+  function lcFirst(s) {
+    if (s.length > 1 && s.charAt(1) === s.charAt(1).toLowerCase() && s.charAt(1) !== s.charAt(1).toUpperCase()) {
+      return s.charAt(0).toLowerCase() + s.slice(1);
+    }
+    return s;
+  }
+  function joinVi(items) {
+    if (items.length <= 1) return items.join("");
+    return items.slice(0, -1).join(", ") + " và " + items[items.length - 1];
+  }
+  function fieldById(id) {
+    for (var i = 0; i < SECTIONS.length; i++)
+      for (var j = 0; j < SECTIONS[i].fields.length; j++)
+        if (SECTIONS[i].fields[j].id === id) return SECTIONS[i].fields[j];
+    return null;
+  }
+  function optionLabel(fieldId, value) {
+    var f = fieldById(fieldId);
+    for (var i = 0; f && i < f.options.length; i++) if (f.options[i].value === value) return f.options[i].label;
+    return "";
+  }
+
+  function detectPreset() {
+    var hay = (str(state.answers.industry) + " " + str(state.answers.role)).toLowerCase();
+    var order = ["mamnon", "sanxuat", "vanphong", "kinhdoanh", "yte", "cntt", "phothong"];
+    for (var i = 0; i < order.length; i++) {
+      var p = PRESETS[order[i]];
+      if (hay.indexOf(p.name.toLowerCase()) >= 0) return order[i];
+    }
+    for (i = 0; i < order.length; i++) {
+      var kws = PRESETS[order[i]].keywords;
+      for (var j = 0; j < kws.length; j++) {
+        var kw = kws[j];
+        var re = new RegExp("(^|[^\\p{L}])" + kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "($|[^\\p{L}])", "u");
+        if (re.test(hay)) return order[i];
+      }
+    }
+    return "";
+  }
+
+  // Khi phát hiện ngành mới: tích sẵn loại sản phẩm thường dùng (chỉ thêm, không bỏ lựa chọn của người dùng)
+  function applyPresetDefaults() {
+    var key = detectPreset();
+    if (!key || key === state.appliedPreset) return;
+    state.appliedPreset = key;
+    var defs = PRESETS[key].defaultProducts || [];
+    var cur = Array.isArray(state.answers.products) ? state.answers.products.slice() : [];
+    defs.forEach(function (v) { if (cur.indexOf(v) < 0) cur.push(v); });
+    state.answers.products = cur;
+  }
+
+  function suggestionsFor(id) {
+    var key = detectPreset();
+    var list = [];
+    if (key && PRESETS[key][id]) list = list.concat(PRESETS[key][id]);
+    if (GENERAL[id]) list = list.concat(GENERAL[id]);
+    var seen = {};
+    return list.filter(function (s) { if (seen[s]) return false; seen[s] = true; return true; });
+  }
+
+  /* ---------- Gợi ý dạng chip ---------- */
+  function isSelected(field, text) {
+    var v = state.answers[field.id];
+    var items = field.type === "text" ? toParts(v) : toLines(v);
+    return items.indexOf(text) >= 0;
+  }
+  function toggleChip(field, text) {
+    var v = str(state.answers[field.id]);
+    var next;
+    if (field.type === "text") {
+      var parts = toParts(v);
+      var i = parts.indexOf(text);
+      if (i >= 0) parts.splice(i, 1); else parts.push(text);
+      next = parts.join("; ");
+    } else {
+      var raw = v.split(/\r?\n/);
+      var idx = -1;
+      for (var k = 0; k < raw.length; k++) if (cleanItem(raw[k]) === text) { idx = k; break; }
+      if (idx >= 0) raw.splice(idx, 1);
+      else raw.push(text);
+      next = raw.filter(function (l) { return l.trim() !== ""; }).join("\n");
+    }
+    state.answers[field.id] = next;
+    var input = document.getElementById("f-" + field.id);
+    if (input) input.value = next;
+    afterChange(field.id);
+  }
+  function renderChips(field) {
+    var box = document.getElementById("chips-" + field.id);
+    if (!box) return;
+    var list = suggestionsFor(field.id);
+    box.parentNode.hidden = list.length === 0;
+    box.textContent = "";
+    list.forEach(function (text) {
+      var b = el("button", { type: "button", class: "chip", "aria-pressed": isSelected(field, text) ? "true" : "false", text: text });
+      b.addEventListener("click", function () { toggleChip(field, text); });
+      box.appendChild(b);
+    });
+  }
+  function refreshAllChips() {
+    var sec = SECTIONS[state.step];
+    if (!sec) return;
+    sec.fields.forEach(function (f) { if (f.type === "text" || f.type === "lines" || f.type === "textarea") renderChips(f); });
+  }
+
+  function afterChange(id) {
+    if (id === "industry" || id === "role") {
+      var before = state.appliedPreset;
+      applyPresetDefaults();
+      if (before !== state.appliedPreset) syncChoiceInputs("products");
+      refreshAllChips();
+    } else {
+      var f = fieldById(id);
+      if (f) renderChips(f);
+    }
+    save();
+  }
+  function syncChoiceInputs(id) {
+    var vals = state.answers[id];
+    var boxes = document.querySelectorAll('input[name="' + id + '"]');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = Array.isArray(vals) && vals.indexOf(boxes[i].value) >= 0;
+    toggleOther(id);
+  }
+  function toggleOther(id) {
+    var f = fieldById(id);
+    if (!f || !f.otherId) return;
+    var wrap = document.getElementById("other-" + id);
+    if (wrap) wrap.hidden = !(Array.isArray(state.answers[id]) && state.answers[id].indexOf("other") >= 0);
+  }
+
+  /* ---------- Hiển thị câu hỏi ---------- */
+  function renderField(f) {
+    var a = state.answers;
+    if (f.type === "radio" || f.type === "checkbox") {
+      var fs = el("fieldset", { class: "field" });
+      var lg = el("legend", { text: f.label });
+      if (f.optional) lg.appendChild(el("span", { class: "opt", text: " (không bắt buộc)" }));
+      fs.appendChild(lg);
+      if (f.hint) fs.appendChild(el("p", { class: "hint", text: f.hint }));
+      var grid = el("div", { class: "choices" + (f.options.length > 3 ? " cols" : "") });
+      f.options.forEach(function (o) {
+        var input = el("input", { type: f.type, name: f.id, value: o.value });
+        if (f.type === "radio") input.checked = a[f.id] === o.value;
+        else input.checked = Array.isArray(a[f.id]) && a[f.id].indexOf(o.value) >= 0;
+        input.addEventListener("change", function () {
+          if (f.type === "radio") a[f.id] = o.value;
+          else {
+            var cur = Array.isArray(a[f.id]) ? a[f.id].slice() : [];
+            var i = cur.indexOf(o.value);
+            if (input.checked && i < 0) cur.push(o.value);
+            if (!input.checked && i >= 0) cur.splice(i, 1);
+            a[f.id] = cur;
+            toggleOther(f.id);
+          }
+          save();
+        });
+        grid.appendChild(el("label", { class: "choice" }, [input, el("span", { text: o.label })]));
+      });
+      fs.appendChild(grid);
+      if (f.otherId) {
+        var oi = el("input", { type: "text", id: "f-" + f.otherId, placeholder: f.otherPlaceholder || "", "aria-label": "Ghi rõ loại sản phẩm khác" });
+        oi.value = str(a[f.otherId]);
+        oi.addEventListener("input", function () { a[f.otherId] = oi.value; save(); });
+        var ow = el("div", { class: "other-input", id: "other-" + f.id }, [oi]);
+        fs.appendChild(ow);
+      }
+      return fs;
+    }
+
+    var wrap = el("div", { class: "field" });
+    var lab = el("label", { class: "q", for: "f-" + f.id, text: f.label });
+    if (f.optional) lab.appendChild(el("span", { class: "opt", text: " (không bắt buộc)" }));
+    wrap.appendChild(lab);
+    var hint = f.hint || (f.type === "lines" ? "Mỗi dòng một ý. Bấm gợi ý bên dưới để thêm hoặc bỏ." : "");
+    if (f.type === "text" && suggestionsFor(f.id).length && !f.hint) hint = "Gõ câu trả lời hoặc bấm gợi ý bên dưới (chọn được nhiều).";
+    if (hint) wrap.appendChild(el("p", { class: "hint", id: "h-" + f.id, text: hint }));
+    var input = f.type === "text"
+      ? el("input", { type: "text", id: "f-" + f.id, autocomplete: "off" })
+      : el("textarea", { id: "f-" + f.id, rows: f.tall ? "5" : "3", class: f.tall ? "tall" : "" });
+    input.setAttribute("placeholder", f.placeholder || "");
+    if (hint) input.setAttribute("aria-describedby", "h-" + f.id);
+    input.value = str(a[f.id]);
+    input.addEventListener("input", function () { a[f.id] = input.value; afterChange(f.id); });
+    wrap.appendChild(input);
+    var cw = el("div", { class: "chips-wrap" }, [
+      el("p", { class: "chips-title", text: "Gợi ý (bấm để chọn, bấm lại để bỏ):" }),
+      el("div", { class: "chips", id: "chips-" + f.id, role: "group", "aria-label": "Gợi ý cho " + f.label })
+    ]);
+    wrap.appendChild(cw);
+    return wrap;
+  }
+
+  var card = document.getElementById("card");
+  var backBtn = document.getElementById("backBtn");
+  var nextBtn = document.getElementById("nextBtn");
+
+  function render(focus) {
+    card.textContent = "";
+    var isResult = state.step >= TOTAL;
+    var pct = isResult ? 100 : Math.round((state.step + 1) / TOTAL * 100);
+    document.getElementById("barFill").style.width = pct + "%";
+    document.getElementById("bar").setAttribute("aria-valuenow", String(pct));
+    document.getElementById("stepTitle").textContent = isResult ? "Kết quả" : SECTIONS[state.step].title;
+    document.getElementById("stepCount").textContent = isResult ? "Hoàn thành" : "Bước " + (state.step + 1) + "/" + TOTAL;
+    backBtn.hidden = state.step === 0;
+    nextBtn.hidden = isResult;
+    nextBtn.textContent = state.step === TOTAL - 1 ? "Xem kết quả →" : "Tiếp theo →";
+
+    var h2;
+    if (isResult) {
+      h2 = renderResult();
+    } else {
+      var sec = SECTIONS[state.step];
+      h2 = el("h2", { tabindex: "-1", text: (state.step + 1) + ". " + sec.title });
+      card.appendChild(h2);
+      card.appendChild(el("p", { class: "intro", text: sec.intro }));
+      sec.fields.forEach(function (f) { card.appendChild(renderField(f)); });
+      sec.fields.forEach(function (f) { toggleOther(f.id); });
+      refreshAllChips();
+    }
+    if (focus) {
+      window.scrollTo(0, 0);
+      h2.focus({ preventScroll: true });
+    }
+  }
+
+  function go(step) {
+    state.step = Math.min(Math.max(step, 0), TOTAL);
+    save();
+    render(true);
+  }
+  backBtn.addEventListener("click", function () { go(state.step - 1); });
+  nextBtn.addEventListener("click", function () { go(state.step + 1); });
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (!window.confirm("Xóa toàn bộ câu trả lời trên thiết bị này?")) return;
+    state = { step: 0, answers: {}, appliedPreset: "" };
+    clearStore();
+    render(true);
+  });
+
+  /* ---------- Tạo nội dung markdown ---------- */
+  var EXPERIENCE_HINT = {
+    beginner: "Người dùng mới bắt đầu, vì vậy hãy giải thích rõ từng bước và nói rõ nghĩa của thuật ngữ chuyên sâu.",
+    experienced: "Người dùng đã có kinh nghiệm, có thể dùng thuật ngữ chuyên ngành thông dụng và chỉ giải thích khi cần.",
+    expert: "Người dùng là chuyên gia, hãy đi thẳng vào vấn đề, không cần giải thích kiến thức cơ bản."
+  };
+  var MISSING_TEXT = {
+    ask: "Khi thiếu thông tin cần thiết, hãy dừng lại và hỏi tôi trước khi làm. Gom các câu hỏi thành một danh sách ngắn, có đánh số.",
+    decide: "Khi thiếu thông tin, hãy tự đưa ra giả định hợp lý để hoàn thành công việc, rồi ghi rõ các giả định đó trong mục «Giả định» ở cuối sản phẩm.",
+    mixed: "Khi thiếu thông tin quan trọng (ảnh hưởng đến nội dung chính hoặc số liệu), hãy hỏi tôi trước. Với chi tiết nhỏ, hãy tự quyết định và ghi chú giả định ở cuối sản phẩm."
+  };
+  var ABBREV_TEXT = {
+    yes: "Được dùng từ viết tắt.",
+    defined: "Chỉ dùng từ viết tắt có trong mục Thuật ngữ; các từ khác viết đầy đủ.",
+    no: "Không dùng từ viết tắt, luôn viết đầy đủ."
+  };
+
+  function section(title, body) {
+    body = body.filter(Boolean);
+    if (!body.length) return "";
+    return "## " + title + "\n\n" + body.join("\n") + "\n";
+  }
+  function bullet(label, value) {
+    return value ? "- **" + label + ":** " + value : "";
+  }
+  function bulletList(label, items) {
+    if (!items.length) return "";
+    if (items.length === 1) return bullet(label, items[0]);
+    return "- **" + label + ":**\n" + items.map(function (i) { return "  - " + i; }).join("\n");
+  }
+  function plainList(items, prefix) {
+    return items.map(function (i) { return (prefix || "- ") + i; });
+  }
+
+  function buildMarkdown() {
+    var a = state.answers;
+    var role = toParts(a.role);
+    var industry = toParts(a.industry);
+    var exp = str(a.experience);
+    var name = str(a.projectName).trim();
+    var goal = toLines(a.goal);
+    var challenges = toLines(a.challenges);
+    var outcome = toLines(a.outcome);
+    var deadline = str(a.deadline).trim();
+    var products = (Array.isArray(a.products) ? a.products : [])
+      .filter(function (v) { return v !== "other"; })
+      .map(function (v) { return optionLabel("products", v); }).filter(Boolean);
+    if (Array.isArray(a.products) && a.products.indexOf("other") >= 0) {
+      var other = str(a.productsOther).trim();
+      products.push(other ? other : "Khác");
+    }
+    var audience = toLines(a.audience);
+    var layout = toLines(a.layout);
+    var length = str(a.length).trim();
+    var language = str(a.language).trim();
+    var tone = (Array.isArray(a.tone) ? a.tone : []).map(function (v) { return optionLabel("tone", v).toLowerCase(); }).filter(Boolean);
+    var detail = a.detail ? optionLabel("detail", a.detail) : "";
+    var terms = toLines(a.terms);
+    var abbrev = ABBREV_TEXT[a.abbrev] || "";
+    var mustDo = toLines(a.mustDo);
+    var mustNot = toLines(a.mustNot);
+    var refs = toLines(a.references);
+    var criteria = toLines(a.criteria);
+    var example = str(a.goodExample).trim();
+    var missing = MISSING_TEXT[a.missingInfo] || "";
+
+    var out = [];
+    out.push("# Hướng dẫn dự án: " + (name || "Dự án chưa đặt tên") + "\n");
+
+    // Vai trò của Claude: đoạn văn ghép từ phần 1 và 2
+    var p = [];
+    if (role.length || industry.length) {
+      p.push("Bạn là trợ lý hỗ trợ " +
+        (role.length ? "một " + role.map(lcFirst).join(" kiêm ") : "người dùng") +
+        (industry.length ? " trong lĩnh vực " + joinVi(industry.map(lcFirst)) : "") + ".");
+    }
+    if (EXPERIENCE_HINT[exp]) p.push(EXPERIENCE_HINT[exp]);
+    if (goal.length) p.push((name ? "Trong dự án «" + name + "», nhiệm vụ" : "Nhiệm vụ") +
+      " của bạn là giúp người dùng: " + goal.map(function (g) { return lcFirst(noDot(g)); }).join("; ") + ".");
+    if (challenges.length) p.push("Hãy chú ý giải quyết các khó khăn họ đang gặp: " + challenges.map(function (g) { return lcFirst(noDot(g)); }).join("; ") + ".");
+    if (outcome.length) p.push("Kết quả cần hướng tới: " + outcome.map(function (g) { return lcFirst(noDot(g)); }).join("; ") + ".");
+    if (p.length) out.push(section("Vai trò của Claude", [p.join(" ")]));
+
+    out.push(section("Bối cảnh người dùng", [
+      bullet("Vai trò", role.join("; ")),
+      bullet("Ngành, lĩnh vực", industry.join("; ")),
+      bullet("Mức kinh nghiệm", exp ? optionLabel("experience", exp) : "")
+    ]));
+
+    out.push(section("Mục tiêu và kết quả mong muốn", [
+      bulletList("Mục tiêu chính", goal),
+      bulletList("Khó khăn đang gặp", challenges),
+      bulletList("Kết quả mong muốn", outcome),
+      bullet("Thời hạn", deadline)
+    ]));
+
+    out.push(section("Sản phẩm đầu ra", [
+      bullet("Loại sản phẩm", products.join(", ")),
+      bulletList("Người đọc, người dùng", audience),
+      bulletList("Bố cục hoặc mẫu bắt buộc", layout),
+      bullet("Độ dài mong muốn", length)
+    ]));
+
+    out.push(section("Cách trình bày và ngôn ngữ", [
+      bullet("Ngôn ngữ", language),
+      bullet("Giọng văn", tone.length ? tone.join(", ") : ""),
+      bullet("Mức chi tiết", detail),
+      bullet("Viết tắt", abbrev)
+    ]));
+
+    out.push(section("Thuật ngữ", plainList(terms)));
+    out.push(section("Quy tắc bắt buộc", plainList(mustDo)));
+    out.push(section("Điều không được làm", plainList(mustNot)));
+    out.push(section("Tài liệu tham khảo", plainList(refs)));
+
+    var crit = plainList(criteria, "- [ ] ");
+    if (example) {
+      crit.push((crit.length ? "\n" : "") + "**Ví dụ sản phẩm tốt:**\n");
+      crit = crit.concat(example.split(/\r?\n/).map(function (l) { return l.trim() ? "> " + l : ">"; }));
+    }
+    var critBody = crit.length && criteria.length
+      ? ["Trước khi giao sản phẩm, hãy tự kiểm tra từng tiêu chí sau:\n"].concat(crit)
+      : crit;
+    out.push(section("Tiêu chí kiểm tra trước khi giao", critBody));
+
+    out.push(section("Khi thiếu thông tin", [missing]));
+
+    return out.filter(Boolean).join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  }
+
+  /* ---------- Màn hình kết quả ---------- */
+  function renderResult() {
+    var md = buildMarkdown();
+    var h2 = el("h2", { tabindex: "-1", text: "Tệp hướng dẫn của bạn" });
+    card.appendChild(h2);
+    card.appendChild(el("p", { class: "intro", text: "Tải tệp huong-dan-du-an.md rồi đưa vào phần hướng dẫn hoặc tài liệu của dự án Claude." }));
+    if (!str(state.answers.projectName).trim()) {
+      card.appendChild(el("p", { class: "notice", text: "Bạn chưa nhập tên dự án nên tiêu đề tạm là “Dự án chưa đặt tên”. Có thể quay lại phần 2 để thêm." }));
+    }
+    var dl = el("button", { type: "button", class: "btn primary", id: "downloadBtn", text: "Tải tệp hướng dẫn" });
+    var cp = el("button", { type: "button", class: "btn", id: "copyBtn", text: "Sao chép nội dung" });
+    var status = el("p", { class: "status", role: "status", id: "copyStatus" });
+    dl.addEventListener("click", function () { download(md); status.textContent = "Đã tạo tệp huong-dan-du-an.md."; });
+    cp.addEventListener("click", function () {
+      copyText(md).then(function () { status.textContent = "Đã sao chép nội dung."; },
+        function () { status.textContent = "Không sao chép được. Hãy chọn nội dung bên dưới và sao chép thủ công."; });
+    });
+    card.appendChild(el("div", { class: "actions" }, [dl, cp]));
+    card.appendChild(status);
+    card.appendChild(el("p", { class: "chips-title", text: "Xem trước nội dung tệp:" }));
+    card.appendChild(el("pre", { class: "preview", id: "preview", tabindex: "0", text: md }));
+    var edit = el("button", { type: "button", class: "btn", text: "Sửa câu trả lời", style: "margin-top:16px;width:100%" });
+    edit.addEventListener("click", function () { go(0); });
+    card.appendChild(edit);
+    return h2;
+  }
+
+  function download(md) {
+    var blob = new Blob(["﻿" + md], { type: "text/markdown;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = el("a", { href: url, download: "huong-dan-du-an.md" });
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopy(text); });
+    }
+    return legacyCopy(text);
+  }
+  function legacyCopy(text) {
+    return new Promise(function (resolve, reject) {
+      var ta = el("textarea", { readonly: "", style: "position:fixed;top:0;left:-9999px;" });
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? resolve() : reject();
+    });
+  }
+
+  // Cho phép kiểm thử tự động gọi hàm tạo nội dung
+  window.__khaoSat = { buildMarkdown: buildMarkdown };
+
+  load();
+  render(false);
+})();
+</script>
+</body>
+</html>
